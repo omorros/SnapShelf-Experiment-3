@@ -25,23 +25,11 @@ This repository is **Experiment 3** of a three-part final major project evaluati
 
 ## Architecture
 
-```
-┌──────────────────┐
-│   Mobile Client   │
-│  (React Native)   │
-└────────┬──────────┘
-         │ JWT Auth + REST
-         ▼
-┌──────────────────┐
-│   FastAPI API     │
-│   (Backend)       │
-└──┬───────────┬───┘
-   │           │
-   ▼           ▼
-┌────────┐  ┌──────────────┐
-│ Postgres│  │ OpenAI API   │
-│   DB    │  │ (GPT-4o)     │
-└────────┘  └──────────────┘
+```mermaid
+graph TD
+    A[Mobile Client<br/>React Native + Expo] -->|JWT Auth + REST| B[FastAPI Backend]
+    B --> C[(PostgreSQL)]
+    B --> D[OpenAI API<br/>GPT-4o Vision]
 ```
 
 ### Core Design Principle: AI as Assistant, Not Authority
@@ -50,11 +38,14 @@ All AI outputs land as **DraftItems** (untrusted, nullable fields, confidence sc
 
 ### Data Flow
 
-```
-Photo → GPT-4o Vision → Detected items with confidence scores
-     → Draft items created (user reviews)
-     → User confirms/edits → Inventory items saved
-     → Rule-based expiry prediction applied
+```mermaid
+flowchart LR
+    A[Photo] --> B[GPT-4o Vision]
+    B --> C[Detected Items<br/>+ confidence scores]
+    C --> D[Draft Items<br/>user reviews]
+    D --> E{User confirms<br/>or edits}
+    E --> F[Inventory Items<br/>saved]
+    F --> G[Rule-based<br/>expiry prediction]
 ```
 
 ## Project Structure
@@ -102,8 +93,7 @@ SnapShelf-Experiment-3/
 ├── tests/                             # Backend unit tests
 │   ├── test_expiry_prediction.py
 │   └── test_image_ingestion.py
-├── requirements.txt                   # Python dependencies
-└── PRD.md                             # Product Requirements Document
+└── requirements.txt                   # Python dependencies
 ```
 
 ## API Endpoints
