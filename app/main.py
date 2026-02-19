@@ -4,6 +4,8 @@ from app.core.database import engine, Base
 from app.models import user, draft_item, inventory_item  # noqa: F401
 from app.routers import auth, draft_items, inventory_items, ingestion
 
+# Create all tables on startup
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="SnapShelf Exp3",
