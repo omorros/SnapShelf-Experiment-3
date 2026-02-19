@@ -15,8 +15,8 @@ BACKEND (FastAPI)
 1. Activate venv:
    venv\Scripts\activate
 
-2. Run server:
-   uvicorn app.main:app --reload --port 8001
+2. Run server (0.0.0.0 so phone can connect over hotspot):
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 
 3. API docs:
    http://localhost:8001/docs
@@ -29,7 +29,14 @@ MOBILE (React Native / Expo)
    cd mobile
    npm install
 
-2. Run Expo:
+2. Update API IP (if hotspot IP changed):
+   mobile/services/api.ts  →  line 7
+   const API_BASE_URL = 'http://YOUR_IP:8001';
+
+   To find your current IP:
+   python -c "import socket; s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.connect(('8.8.8.8',80)); print(s.getsockname()[0]); s.close()"
+
+3. Run Expo:
    cd mobile
    npx expo start
 
@@ -39,3 +46,4 @@ QUICK REFERENCE
 
 Health check:  http://localhost:8001/health
 API docs:      http://localhost:8001/docs
+Current IP:    172.20.10.4 (hotspot — update if changed)
