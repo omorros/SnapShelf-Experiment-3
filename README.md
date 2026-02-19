@@ -1,349 +1,205 @@
-# SnapShelf
+# SnapShelf — Experiment 3: Artefact Integration
 
-> Mobile grocery tracker with fast item scanning, expiry reminders, and recipe recommendations to reduce food waste.
+> Demonstrating the best recognition pipeline from Experiment 2 inside a working mobile app.
 
-![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg)
-![React Native](https://img.shields.io/badge/React_Native-Expo-black.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.129-009688.svg)
+![React Native](https://img.shields.io/badge/React_Native-Expo_SDK_54-black.svg)
 
-## Overview
+## Context
 
-SnapShelf is a full-stack mobile application that helps users track their food inventory, predict expiration dates, and make informed consumption decisions to reduce food waste. The system leverages AI for intelligent food recognition and data entry while maintaining strict user control over all trusted data.
+This repository is **Experiment 3** of a three-part final major project evaluating photo-to-inventory recognition pipelines for 14 fruit/vegetable classes.
 
-### Key Principles
+| Experiment | Goal |
+|---|---|
+| **1 — Classification Benchmark** | Pick the best crop-classifier (Custom CNN, EfficientNet, ResNet) |
+| **2 — Pipeline Comparison** | Compare LLM-only, YOLO end-to-end, and YOLO+CNN pipelines |
+| **3 — Artefact Integration (this repo)** | Plug the best pipeline into a working app and measure real-world performance |
 
-- **AI as Assistant, Not Authority**: All AI outputs require explicit user confirmation
-- **User Trust First**: Clear separation between AI-suggested (draft) and user-confirmed (inventory) data
-- **Backend-Driven Architecture**: All business logic resides in the API; clients remain thin
-- **Production-Ready**: Built for real-world deployment with academic rigor
+## What This Experiment Demonstrates
 
-## Features
-
-### Intelligent Food Ingestion
-- **Barcode Scanning**: Real-time barcode detection with automatic product lookup via OpenFoodFacts API
-- **Image Recognition**: GPT-4o Vision-powered food item identification from photos
-- **Manual Entry**: Traditional form-based input for maximum control
-
-### Inventory Management
-- **Smart Organization**: Automatic sorting by expiration date with visual indicators
-- **Partial Consumption**: Track gradual consumption of items
-- **Category-Based Filtering**: Organized by food categories with color coding
-- **Expiry Predictions**: AI-assisted expiration date estimation with user override
-
-### Security & Authentication
-- **JWT-Based Auth**: Secure token-based authentication with 7-day expiration
-- **Password Security**: bcrypt-hashed passwords
-- **User Privacy**: Complete data isolation per user account
-
-## Tech Stack
-
-### Backend
-- **Framework**: FastAPI (Python 3.10+)
-- **Database**: PostgreSQL with SQLAlchemy ORM
-- **Authentication**: JWT tokens, bcrypt password hashing
-- **AI/ML**: OpenAI GPT-4o Vision API
-- **External APIs**: OpenFoodFacts for barcode lookup
-
-### Mobile Application
-- **Framework**: React Native with Expo SDK
-- **Navigation**: Expo Router (file-based routing)
-- **Camera**: expo-camera for barcode scanning
-- **Storage**: expo-secure-store for token management
-
-### DevOps & Testing
-- **Testing**: pytest with comprehensive test coverage
-- **API Documentation**: Auto-generated OpenAPI (Swagger) docs
-- **Development**: Hot-reload enabled for both backend and mobile
+1. **Recognition engine interface** — pluggable service layer for the image recognition pipeline
+2. **Best pipeline integration** — GPT-4o Vision (LLM-only pipeline) as the recognition engine
+3. **Full app flow** — take photo → AI suggests items → user confirms/edits → saved to inventory
+4. **Measured outcomes** — recognition time, correction rate, screenshots, architecture diagram
 
 ## Architecture
+
+```
+┌──────────────────┐
+│   Mobile Client   │
+│  (React Native)   │
+└────────┬──────────┘
+         │ JWT Auth + REST
+         ▼
+┌──────────────────┐
+│   FastAPI API     │
+│   (Backend)       │
+└──┬───────────┬───┘
+   │           │
+   ▼           ▼
+┌────────┐  ┌──────────────┐
+│ Postgres│  │ OpenAI API   │
+│   DB    │  │ (GPT-4o)     │
+└────────┘  └──────────────┘
+```
+
+### Core Design Principle: AI as Assistant, Not Authority
+
+All AI outputs land as **DraftItems** (untrusted, nullable fields, confidence scores). The user must explicitly confirm before they become **InventoryItems** (trusted, all fields required). This separation is central to the system.
 
 ### Data Flow
 
 ```
-┌─────────────────┐
-│  Mobile Client  │
-│  (React Native) │
-└────────┬────────┘
-         │ JWT Auth
-         ▼
-┌─────────────────┐
-│   FastAPI API   │
-│   (Backend)     │
-└────────┬────────┘
-         │
-    ┌────┴────┐
-    ▼         ▼
-┌────────────┐ ┌──────────┐
-│ PostgreSQL │ │ OpenAI & │
-│     DB     │ │ External │
-│            │ │   APIs   │
-└────────────┘ └──────────┘
+Photo → GPT-4o Vision → Detected items with confidence scores
+     → Draft items created (user reviews)
+     → User confirms/edits → Inventory items saved
+     → Rule-based expiry prediction applied
 ```
-
-### Core Data Models
-
-#### DraftItem (AI-Generated)
-Temporary items created by AI ingestion, awaiting user confirmation.
-- Nullable fields (quantity, expiry_date, etc.)
-- Includes confidence scores
-- Source tracking (image/barcode/manual)
-
-#### InventoryItem (User-Confirmed)
-Trusted inventory data after user review and confirmation.
-- All fields required
-- Used for analytics and predictions
-- Immutable source of truth
-
-### API Structure
-
-```
-/auth
-  POST /register          # User registration
-  POST /login             # User login (returns JWT)
-
-/api/draft-items
-  GET  /                  # List draft items
-  POST /                  # Create draft item
-  POST /{id}/confirm      # Confirm draft → inventory
-  DELETE /{id}            # Delete draft
-
-/api/inventory
-  GET  /                  # List inventory items
-  GET  /{id}              # Get specific item
-  PUT  /{id}              # Update item
-  PATCH /{id}/quantity    # Update quantity only
-  DELETE /{id}            # Delete item
-
-/api/ingest
-  POST /image             # Process image with GPT-4o Vision
-  GET  /barcode/{code}    # Lookup barcode product info
-
-/api/expiry
-  POST /predict           # Predict expiration date
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.10 or higher
-- PostgreSQL database
-- Node.js 16+ and npm
-- OpenAI API key
-- Expo CLI (for mobile development)
-
-### Backend Setup
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd SnapShelf-backend
-```
-
-2. Create and activate virtual environment:
-```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Configure environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your credentials
-```
-
-Required environment variables:
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/snapshelf
-SECRET_KEY=your-secret-key-here
-OPENAI_API_KEY=sk-...
-ACCESS_TOKEN_EXPIRE_MINUTES=10080
-```
-
-5. Run database migrations:
-```bash
-# If using Alembic
-alembic upgrade head
-```
-
-6. Start the development server:
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The API will be available at `http://localhost:8000`
-
-API documentation: `http://localhost:8000/docs`
-
-### Mobile App Setup
-
-1. Navigate to mobile directory:
-```bash
-cd mobile
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Configure API endpoint:
-```typescript
-// mobile/services/api.ts
-const API_BASE_URL = 'http://YOUR_IP:8000';  // Update with your machine's IP
-```
-
-4. Start Expo development server:
-```bash
-npx expo start
-```
-
-5. Run on device:
-- Install Expo Go app on your mobile device
-- Scan the QR code from the terminal
-- Ensure your device is on the same network as your development machine
 
 ## Project Structure
 
 ```
-SnapShelf-backend/
-├── app/
+SnapShelf-Experiment-3/
+├── app/                              # FastAPI backend
 │   ├── core/
-│   │   ├── config.py              # Configuration management
-│   │   ├── database.py            # Database session handling
-│   │   └── security.py            # Authentication & hashing
+│   │   ├── config.py                 # Environment config
+│   │   ├── database.py               # PostgreSQL + SQLAlchemy
+│   │   └── security.py               # JWT auth + bcrypt
 │   ├── models/
-│   │   ├── user.py                # User model
-│   │   ├── draft_item.py          # Draft item model
-│   │   └── inventory_item.py      # Inventory item model
-│   ├── schemas/
-│   │   ├── auth.py                # Auth request/response schemas
-│   │   ├── draft_item.py          # Draft item schemas
-│   │   └── inventory_item.py      # Inventory item schemas
+│   │   ├── user.py                   # User model
+│   │   ├── draft_item.py             # AI-generated draft (untrusted)
+│   │   └── inventory_item.py         # Confirmed item (trusted)
+│   ├── schemas/                      # Pydantic request/response models
 │   ├── routers/
-│   │   ├── auth.py                # Authentication endpoints
-│   │   ├── draft_items.py         # Draft item CRUD
-│   │   ├── inventory_items.py     # Inventory CRUD
-│   │   ├── ingestion.py           # Image/barcode ingestion
-│   │   └── expiry_prediction.py   # Expiry prediction
+│   │   ├── auth.py                   # Register / Login / Me
+│   │   ├── draft_items.py            # CRUD + confirm draft → inventory
+│   │   ├── inventory_items.py        # Inventory CRUD
+│   │   └── ingestion.py              # POST /ingest/image (GPT-4o)
 │   ├── services/
 │   │   ├── ingestion/
-│   │   │   ├── barcode_ingestion.py
-│   │   │   ├── image_ingestion.py
-│   │   │   ├── gpt4o_vision.py
-│   │   │   └── product_lookup.py
+│   │   │   ├── gpt4o_vision.py       # GPT-4o Vision API client
+│   │   │   └── image_ingestion.py    # Orchestrator: detect + predict
 │   │   └── expiry_prediction/
-│   │       ├── service.py
+│   │       ├── service.py            # Prediction service
 │   │       └── strategies/
-│   └── main.py                    # Application entry point
-├── mobile/
+│   │           ├── base.py           # Strategy interface
+│   │           └── rule_based.py     # Lookup-table strategy
+│   └── main.py                       # App entry point
+├── mobile/                            # React Native (Expo)
 │   ├── app/
-│   │   ├── (auth)/               # Authentication screens
-│   │   ├── (tabs)/               # Main app tabs
-│   │   └── add-item.tsx          # Add item screen
+│   │   ├── (auth)/                   # Login + Register screens
+│   │   ├── (tabs)/                   # Inventory + Settings tabs
+│   │   ├── add-item.tsx              # Scan image or manual entry
+│   │   └── edit-item.tsx             # Edit inventory item
+│   ├── components/                   # UI + domain components
 │   ├── services/
-│   │   ├── api.ts                # API client
-│   │   └── auth.tsx              # Auth context
-│   └── types/
-│       └── index.ts              # TypeScript definitions
-├── tests/
+│   │   ├── api.ts                    # REST client
+│   │   └── auth.tsx                  # Auth context + JWT storage
+│   ├── theme/                        # Design tokens
+│   ├── types/                        # TypeScript interfaces
+│   └── utils/                        # Merge + unit conversion helpers
+├── tests/                             # Backend unit tests
 │   ├── test_expiry_prediction.py
-│   ├── test_barcode_endpoint.py
 │   └── test_image_ingestion.py
-├── .env                          # Environment configuration
-├── requirements.txt              # Python dependencies
-└── README.md                     # This file
+├── requirements.txt                   # Python dependencies
+└── PRD.md                             # Product Requirements Document
 ```
 
-## Development
+## API Endpoints
 
-### Running Tests
+```
+POST   /auth/register              # Create account → JWT
+POST   /auth/login                 # Login → JWT
+GET    /auth/me                    # Current user profile
+
+POST   /api/ingest/image           # Upload photo → GPT-4o → draft items
+
+GET    /api/draft-items            # List drafts
+POST   /api/draft-items            # Create draft manually
+PATCH  /api/draft-items/{id}       # Edit draft
+DELETE /api/draft-items/{id}       # Discard draft
+POST   /api/draft-items/{id}/confirm   # Promote draft → inventory
+
+GET    /api/inventory              # List inventory (sorted by expiry)
+GET    /api/inventory/{id}         # Get item
+PUT    /api/inventory/{id}         # Update item
+PATCH  /api/inventory/{id}/quantity    # Update quantity
+DELETE /api/inventory/{id}         # Delete item
+```
+
+## Setup & Running
+
+### Prerequisites
+
+- Python 3.10+
+- PostgreSQL
+- Node.js 18+ and npm
+- OpenAI API key
+
+### 1. Backend
 
 ```bash
-# Run all tests
-pytest
+# Create and activate virtual environment
+python -m venv venv
+venv\Scripts\activate            # Windows
+# source venv/bin/activate       # macOS/Linux
 
-# Run with coverage
-pytest --cov=app tests/
+# Install dependencies
+pip install -r requirements.txt
 
-# Run specific test file
-pytest tests/test_expiry_prediction.py -v
+# Create .env file at project root with:
+#   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/SnapShelf-Experiment-3
+#   OPENAI_API_KEY=sk-...
+#   JWT_SECRET_KEY=your-random-secret
+#   JWT_ALGORITHM=HS256
+#   ACCESS_TOKEN_EXPIRE_MINUTES=10080
+
+# Start server (0.0.0.0 so mobile device can connect over network)
+uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
-### API Documentation
+Tables are auto-created on first startup. API docs available at `http://localhost:8001/docs`.
 
-Once the backend is running, visit:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### Code Style
-
-The project follows:
-- **Python**: PEP 8 style guide
-- **JavaScript/TypeScript**: ESLint + Prettier
-- **Commits**: Conventional Commits specification
-
-## Deployment
-
-### Backend Deployment
-
-The FastAPI backend can be deployed to any platform supporting Python web applications:
-- **Railway**: One-click deployment
-- **Heroku**: With Postgres add-on
-- **AWS**: EC2 + RDS
-- **DigitalOcean**: App Platform
-
-Ensure environment variables are properly configured in your deployment platform.
-
-### Mobile App Deployment
+### 2. Mobile
 
 ```bash
 cd mobile
+npm install
 
-# Build for production
-eas build --platform android
-eas build --platform ios
+# Update API IP if needed (mobile/services/api.ts line 7)
+# Set it to your machine's local IP (e.g. 192.168.x.x or hotspot IP)
 
-# Submit to stores
-eas submit --platform android
-eas submit --platform ios
+npx expo start
 ```
 
-## Contributing
+Scan the QR code with Expo Go on your phone. Both devices must be on the same network.
 
-This project is part of a university final-year Software Engineering project. Contributions are currently limited to project collaborators.
+### Finding Your IP
 
-### Development Workflow
+```bash
+python -c "import socket; s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.connect(('8.8.8.8',80)); print(s.getsockname()[0]); s.close()"
+```
 
-1. Create a feature branch from `main`
-2. Implement changes with appropriate tests
-3. Ensure all tests pass: `pytest`
-4. Submit pull request with detailed description
+## Running Tests
 
-## License
+```bash
+pytest tests/ -v
+```
 
-This project is proprietary software developed for academic and commercial purposes.
+## Tech Stack
 
-## Acknowledgments
+| Layer | Technology |
+|---|---|
+| Backend | FastAPI, SQLAlchemy, PostgreSQL |
+| Auth | JWT (HS256) + bcrypt |
+| Recognition | OpenAI GPT-4o Vision API |
+| Expiry prediction | Rule-based lookup tables |
+| Mobile | React Native, Expo SDK 54, Expo Router |
+| Storage | expo-secure-store (JWT tokens) |
 
-- **OpenFoodFacts**: Open database for product information
-- **OpenAI**: GPT-4o Vision API for image recognition
-- **FastAPI**: Modern web framework for building APIs
-- **Expo**: React Native development platform
+## Acknowledgements
 
-## Contact
-
-For questions or support, please contact the development team.
-
----
-
-**Note**: This is an active development project. Features and documentation are continuously updated.
+- OpenAI GPT-4o Vision API for image recognition
+- FastAPI for the backend framework
+- Expo for React Native development
