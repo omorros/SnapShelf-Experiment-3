@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { api } from '../../services/api';
 import { InventoryItem, CATEGORIES } from '../../types';
 import { colors, typography, spacing, radius } from '../../theme';
@@ -24,6 +25,7 @@ import { Button } from '../../components/ui/Button';
 import { InventoryItemCard } from '../../components/inventory/InventoryItemCard';
 import { InventoryHeader } from '../../components/inventory/InventoryHeader';
 import { InventoryFilters } from '../../components/inventory/InventoryFilters';
+
 
 // Utils
 import { mergeInventoryItems, MergedInventoryItem } from '../../utils/inventoryMerge';
@@ -100,7 +102,36 @@ export default function InventoryScreen() {
   };
 
   const handleAddItem = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/add-item');
+  };
+
+  const handleSwipeDelete = (item: MergedInventoryItem) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert('Delete Item', `Are you sure you want to delete ${item.name}?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+            text: 'Delete', 
+            style: 'destructive', 
+            onPress: async () => {
+                try {
+                    await Promise.all(item.mergedIds.map(id => api.deleteInventoryItem(id)));
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    fetchInventory();
+                } catch (e: any) {
+                    Alert.alert('Error', e.message);
+                }
+            } 
+        }
+    ]);
+  };
+
+  const handleSwipeEdit = (item: MergedInventoryItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+        pathname: '/edit-item',
+        params: { item: JSON.stringify(item) }
+    });
   };
 
   // Helper for counts
@@ -216,6 +247,8 @@ export default function InventoryScreen() {
             <InventoryItemCard
               item={item}
               onPress={handleItemPress}
+              onDelete={handleSwipeDelete}
+              onEdit={handleSwipeEdit}
               style={{ marginBottom: spacing.md }}
             />
           )}
