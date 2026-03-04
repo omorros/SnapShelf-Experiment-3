@@ -1,3 +1,4 @@
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -23,11 +24,11 @@ async def ingest_image(
     """
     Detect food items from image and create draft items.
 
-    Uses GPT-4o Vision to analyze the image and identify food items.
+    Uses GPT-5.2 Vision to analyze the image and identify food items.
     Creates a DraftItem for each detected item with predicted expiry dates.
 
     Workflow:
-    1. Send image to GPT-4o Vision API
+    1. Send image to GPT-5.2 Vision API
     2. Detect food items and their categories
     3. Predict expiry dates for each item
     4. Create DraftItems for user review/confirmation
@@ -80,12 +81,12 @@ async def ingest_image(
         if item.unit is not None:
             draft_data["unit"] = item.unit
 
-        # Add expiry prediction if available
+        # Add expiry prediction if available (convert ISO string to date)
         if item.predicted_expiry:
-            draft_data["expiration_date"] = item.predicted_expiry
+            draft_data["expiration_date"] = date.fromisoformat(item.predicted_expiry)
 
         # Build notes with detection info
-        notes_parts = ["[Image detection - GPT-4o]"]
+        notes_parts = ["[Image detection - GPT-5.2]"]
         if item.reasoning:
             notes_parts.append(f"[{item.reasoning}]")
         if item.quantity_confidence is not None:

@@ -1,7 +1,7 @@
 """
 Image-based food item detection service.
 
-Orchestrates GPT-4o vision detection with category normalization
+Orchestrates GPT-5.2 vision detection with category normalization
 and expiry prediction to produce draft-ready item data.
 """
 from dataclasses import dataclass, field
@@ -12,7 +12,7 @@ from app.services.ingestion.gpt4o_vision import gpt4o_vision_client, DetectedFoo
 from app.services.expiry_prediction import expiry_prediction_service
 
 
-# Default confidence score for GPT-4o detections
+# Default confidence score for GPT-5.2 detections
 # User confirmation is the real trust gate, so we use a moderate fixed value
 GPT4O_DEFAULT_CONFIDENCE = 0.75
 
@@ -56,7 +56,7 @@ class ImageIngestionService:
     Orchestrates image-based food detection.
 
     Pipeline:
-    1. Send image to GPT-4o Vision API
+    1. Send image to GPT-5.2 Vision API
     2. Normalize categories for each detected item
     3. Predict expiry dates using existing prediction service
     4. Return draft-ready data for router to persist
@@ -77,7 +77,7 @@ class ImageIngestionService:
         Returns:
             ImageIngestionResult with detected items and predictions
         """
-        # Step 1: Call GPT-4o Vision API
+        # Step 1: Call GPT-5.2 Vision API
         try:
             raw_items = gpt4o_vision_client.detect_food_items(image_bytes)
         except RuntimeError as e:
@@ -134,7 +134,7 @@ class ImageIngestionService:
 
     def _normalize_category(self, category: Optional[str]) -> Optional[str]:
         """
-        Normalize GPT-4o category to SnapShelf category.
+        Normalize GPT-5.2 category to SnapShelf category.
 
         Maps to categories used by expiry prediction rules.
         """
@@ -143,7 +143,7 @@ class ImageIngestionService:
 
         category_lower = category.lower().strip()
 
-        # Direct mappings for GPT-4o categories
+        # Direct mappings for GPT-5.2 categories
         # These should match the categories in our prediction rules
         category_map = {
             "dairy": "dairy",
@@ -168,7 +168,7 @@ class ImageIngestionService:
 
     def _normalize_unit(self, unit: Optional[str]) -> Optional[str]:
         """
-        Normalize and validate unit from GPT-4o.
+        Normalize and validate unit from GPT-5.2.
 
         Returns the normalized unit if valid, None otherwise.
         """

@@ -1,7 +1,7 @@
 """
-GPT-4o Vision API client for food item detection.
+GPT-5.2 Vision API client for food item detection.
 
-Uses OpenAI's GPT-4o model to analyze images and detect food items.
+Uses OpenAI's GPT-5.2 model to analyze images and detect food items.
 """
 import base64
 import json
@@ -23,7 +23,7 @@ class DetectedFoodItem:
     quantity_confidence: Optional[float] = None  # 0.0-1.0
 
 
-# Prompt for GPT-4o to detect food items
+# Prompt for GPT-5.2 to detect food items
 DETECTION_PROMPT = """Analyze this image and identify all visible food items.
 
 For each food item you can clearly identify, provide:
@@ -81,7 +81,7 @@ If no food items are visible, return: {"items": []}"""
 
 class GPT4oVisionClient:
     """
-    Client for GPT-4o Vision API.
+    Client for GPT-5.2 Vision API.
 
     Handles image encoding, API calls, and response parsing
     for food item detection.
@@ -100,7 +100,7 @@ class GPT4oVisionClient:
 
     def detect_food_items(self, image_bytes: bytes) -> List[DetectedFoodItem]:
         """
-        Detect food items in an image using GPT-4o.
+        Detect food items in an image using GPT-5.2.
 
         Args:
             image_bytes: Raw image bytes (JPEG, PNG, etc.)
@@ -120,7 +120,7 @@ class GPT4oVisionClient:
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5.2",
                 messages=[
                     {
                         "role": "user",
@@ -140,7 +140,7 @@ class GPT4oVisionClient:
                 max_tokens=800  # Increased to accommodate quantity fields per item
             )
         except Exception as e:
-            raise RuntimeError(f"GPT-4o API error: {str(e)}")
+            raise RuntimeError(f"GPT-5.2 API error: {str(e)}")
 
         # Parse response
         content = response.choices[0].message.content
@@ -163,7 +163,7 @@ class GPT4oVisionClient:
                 if item.get("name")
             ]
         except json.JSONDecodeError as e:
-            raise RuntimeError(f"Failed to parse GPT-4o response: {str(e)}")
+            raise RuntimeError(f"Failed to parse GPT-5.2 response: {str(e)}")
 
     def _detect_image_type(self, image_bytes: bytes) -> str:
         """
